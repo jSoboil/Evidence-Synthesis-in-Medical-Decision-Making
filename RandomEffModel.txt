@@ -1,0 +1,23 @@
+model {
+  for (i in 1:nStud) {
+    # Transforming V into precision variable:
+    P[i] <- 1 / V[i]
+    # Likelihood:
+    Y[i] ~ dnorm(delta[i], P[i])
+    
+    # Random sampling model for between 
+    # study variability:
+    delta[i] ~ dnorm(d, prec)
+  }
+  # Prior for mean effect (d):
+  d ~ dnorm(0, 1.0E-5)
+  # Converting LOR back to OR:
+  OR <- exp(d)
+  
+  # Prior for between study sd:
+  tau ~ dunif(0, 10)
+  # Transforming tau into var
+  # and precision for delta: 
+  tau.sq <- tau * tau
+  prec <- 1 / (tau.sq)
+}

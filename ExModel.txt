@@ -1,0 +1,12 @@
+model {
+# Sampling model/likelihood:
+ for (i in 1:Nstud) {
+  P[i] <- 1/V[i]
+  Y[i] ~ dnorm(d, P[i])
+ }
+ # Prior:
+ d ~ dnorm(0, 1.0e-5)
+ 
+ # Converting pooled LOR (d) to standard OR:
+ OR <- exp(d)
+}
