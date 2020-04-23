@@ -1,0 +1,33 @@
+model {
+  # Likelihood models:
+   # for no. of 
+   # MSUD cases:
+   r.r ~ dbin(r, n.r)
+   # no. detected early
+   # (screening):
+   r.s ~ dbin(phi.s, n.s)
+   # no. deteced early
+   # (no screening):
+   r.n ~ dbin(phi.n, n.n)
+   # no. retarded
+   # (early detection):
+   r.em ~ dbin(theta.em, n.em)
+   # no retarded
+   # (late detection):
+   r.lm ~ dbin(theta.lm, n.lm)
+ 
+ # Priors for basic parameters:
+ r ~ dbeta(1, 1)
+ phi.s ~ dbeta(1, 1)
+ phi.n ~ dbeta(1, 1)
+ theta.em ~ dbeta(1, 1)
+ theta.lm ~ dbeta(1, 1)
+ 
+ # Functional parameters:
+ theta.sm <- phi.s * theta.em + (1 - phi.s) * theta.lm
+ theta.nm <- phi.n * theta.em + (1 - phi.n) * theta.lm
+ theta.s <- (theta.sm * r) * 100000
+ theta.n <- (theta.nm * r) * 100000
+ e.d <- theta.s - theta.n
+}
+

@@ -1,0 +1,38 @@
+model {
+ for (i in 1:19) {
+  # Binomial likelihood
+  # sampling model:
+  rA[i] ~ dbin(pA[i], nA[i])
+  rB[i] ~ dbin(pB[i], nB[i])
+  
+  # Logistic regression
+  # model:
+  logit(pA[i]) <- mu[i]
+  logit(pB[i]) <- mu[i] + delta[i] + beta * (mu[i] - mean(mu[]))
+  
+  # Statistical sampling
+  # model:
+  delta[i] ~ dnorm(d, prec)
+ }
+ # Prior on µ:
+ for (i in 1:19) {
+  mu[i] ~ dnorm(0.0, 1.0e-5)
+ }
+ # Prior on intercept d, 
+ # pooled effect estimate
+ d ~ dnorm(0.0, 1.0e-6)
+ 
+ # Prior on tau, 
+ # between study 
+ # sd:
+ tau ~ dunif(0, 10)
+ # Variance:
+ tau.sq <- tau * tau
+ # Precision as a
+ # function of var:
+ prec <- 1 / (tau.sq)
+ 
+ # Prior on ß:
+ beta ~ dnorm(0.0, 1.0e-6)
+}
+

@@ -1,0 +1,54 @@
+model {
+    for (i in 1:32) {
+     # Likelihood:
+      r[i] ~ dbin(p[i], n[i])
+      
+     # Logistic regression model:
+      logit(p[i]) <- mu[s[i]] + delta[s[i]] * equals(t[i], 2)
+        
+       # Predicted likelihood
+       # for deaths:
+        r.mxd[i] ~ dbin(p.new[i], n[i])
+       
+       # Mixed predictve 
+       # p-value:
+        p.mxd[i] <- step(r.mxd[i] - r[i]) - 0.5 * equals(r.mxd[i], r[i])
+        
+       # Predicted probability
+       # of death:
+        logit(p.new[i]) <- mu[s[i]] + delta.new * equals(t[i], 2)
+
+    }
+  for (j in 1:16) {
+   # Hierarchical random 
+   # effects model:
+    delta[j] ~ dnorm(d, prec) 
+   
+ # Prior for baseline
+ # random effect, µ:
+  mu[j] ~ dnorm(0, 1.0e-6)
+  }
+ 
+ # Prior for Pop. 
+ # treatment effect:
+  d ~ dnorm(0, 1.0e-6)
+ # Population OR:
+  OR <- exp(d)
+ # Prior for btw. studies
+ # sd:
+  tau ~ dnorm(0, 1.0e-6)T(0, )
+ # Variance:
+  tau.sq <- (tau * tau)
+ # Precision:
+  prec <- 1 / (tau.sq)
+ 
+ # Predicted average 
+ # treatment effect:
+  delta.new ~ dnorm(d, prec)
+  
+ # Mean random
+ # effect:
+  delta[19] <- exp(d)
+
+}
+

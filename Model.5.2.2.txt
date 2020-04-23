@@ -1,0 +1,47 @@
+model {
+   # Binomial Likelihood for the 
+   # i'th study:
+   for (i in 1:Nstud) {
+    rA[i] ~ dbin(pA[i], nA[i])
+    rB[i] ~ dbin(pB[i], nB[i])
+  
+    # Logistic regression for
+    # the i'th study:
+     logit(pA[i]) <- mu[i]
+     logit(pB[i]) <- mu[i] + delta[i] + beta * (lat[i] - mean(lat[]))
+  
+   # Statistical model, 
+   # linking the
+   # parameters to likelihood:
+    delta[i] ~ dnorm(d, prec)
+  
+  }
+ # Prior on µ, the estimate 
+ # log(odds) of an event for 
+ # i'th study:
+  for (i in 1:Nstud) {
+   mu[i] ~ dnorm(0.0, 1.0e-5)
+  
+  }
+ # Prior on intercept (d), 
+ # the mean pooled treatment 
+ # effect:
+  d ~ dnorm(0.0, 1.0e-6)
+ # Data transformation for d:
+  OR <- exp(d)
+  
+ # Prior on tau, sd for
+ # between studies:
+  tau ~ dunif(0, 10)
+ # tau.sq, between-study 
+ # variance:
+  tau.sq <- tau * tau
+ # Precision as a 
+ # fucntion of tau:
+  prec <- 1 / (tau.sq)
+  
+ # Prior on Beta, the
+ # coefficient:
+  beta ~ dnorm(0.0, 1.0e-6)
+}
+

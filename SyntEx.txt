@@ -1,0 +1,28 @@
+model {
+  # Binomial likelihood:
+  for (i in 1:6) {
+   r[i] ~ dbin(p[i], n[i])
+  }
+ # Declared relationships
+ # between basic and
+ # functional parameters:
+ p[1] <- a
+ p[2] <- b
+ p[3] <- c
+ p[4] <- d
+ p[5] <- (b * d + (1 - a - b) * e / (1 - a))
+ p[6] <- (a * c + b * d + (1 - a - b) * e)
+ 
+# Estimated basic
+# prior parameters:
+a ~ dbeta(1, 2)
+c ~ dbeta(1, 1)
+d ~ dbeta(1, 1)
+e ~ dbeta(1, 1)
+z ~ dbeta(1, 1)
+# Estiamted functional
+# prior parameters:
+b <- z * (1 - a)
+
+}
+
