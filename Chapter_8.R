@@ -350,7 +350,7 @@ jags_Mod
 posterior <- as.array(jags_Mod$BUGSoutput$sims.array)
 
 color_scheme_set("viridisA")
-theme_set(theme_minimal())
+theme_set()
 mcmc_trace(posterior, pars = c("r.rep", "p[4]"), 
            facet_args = list(ncol = 1, strip.position = "left"))
 
