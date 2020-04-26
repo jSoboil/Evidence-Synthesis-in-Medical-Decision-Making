@@ -1,0 +1,24 @@
+model{
+  # Likelihood:
+   for (i in 1:50) {
+    r[i] ~ dbin(p[i], n[i])
+      
+  # Sampling model:
+   logit(p[i]) <- mu[s[i]] + d[t[i]] - d[b[i]]
+   }
+    
+ # Priors on baselines:
+ for (j in 1:24) {
+  mu[j] ~ dnorm(0, .0001)
+ }
+ # Priors on treatment
+ # effects:
+ for (k in 2:4) {
+  d[k] ~ dnorm(0, .0001)
+ }
+ 
+  # Set d[AA] to 0:
+ d[1] <- 0
+ 
+}
+

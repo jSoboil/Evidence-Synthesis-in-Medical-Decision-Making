@@ -1,0 +1,48 @@
+model{
+  # Likelihood:
+   for (i in 1:50) {
+    r[i] ~ dbin(p[i], n[i])
+      
+  # Sampling model:
+   logit(p[i]) <- mu[s[i]] + d[t[i]] - d[b[i]]
+   }
+   
+  # Absolute treatment
+  # effect sampling 
+  # model:
+  for (k in 1:4) {
+  logit(T[k]) <- A + d[k]
+  
+  }
+ # Set d[1] to 0:
+ d[1] <- 0
+ 
+ # Vague Priors on baseline:
+ for (j in 1:24) {
+  mu[j] ~ dnorm(0, .0001)
+ }
+ # Vague Priors on treatment
+ # effects:
+ for (k in 2:4) {
+  d[k] ~ dnorm(0, .0001)
+ }
+ # Prior Absolute treatment
+ # effects:
+ A ~ dnorm(-2.6, precA)
+ 
+ # Transformation of
+ # Absolute treatment
+ # var to prec:
+ precA <- pow(.38, -2)
+ 
+ for (c in 1:3) { 
+ # All pair-wise comparison log odds ratios:
+  for (k in (c + 1):4) { 
+  # and single study odds ratios:
+  logOR[c, k] <- d[k] - d[c] 
+  OR[c, k] <- exp(logOR[c, k])
+  }
+ }
+ 
+}
+
