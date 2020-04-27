@@ -1,0 +1,71 @@
+model{
+  # Likelihood:
+   for (i in 1:50) {
+    r[i] ~ dbin(p[i], n[i])
+      
+  # Sampling model:
+   logit(p[i]) <- mu[s[i]] + delta[i] * (1 - equals(t[i], b[i]))
+   # Random effects distribution:
+    delta[i] ~ dnorm(md[i], prec)
+    
+   # Mean of random 
+   # effect distribution:
+   md[i] <- d[t[i]] - d[b[i]]
+   
+   }
+   
+  # Absolute treatment
+  # effect sampling 
+  # model:
+  for (k in 1:4) {
+  logit(T[k]) <- A + d[k]
+  
+  }
+ # Set d[1] to 0:
+ d[1] <- 0
+ 
+ # Vague Priors on baseline:
+ for (j in 1:24) {
+  mu[j] ~ dnorm(0, .0001)
+ }
+ # Vague Priors on treatment
+ # effects:
+ for (k in 2:4) {
+  d[k] ~ dnorm(0, .0001)
+ }
+ # Prior Absolute treatment
+ # effects:
+ A ~ dnorm(-2.6, precA)
+ # Transformation of
+ # Absolute treatment
+ # var to prec:
+ precA <- pow(.38, -2)
+ 
+ # Vague prior on RE sd:
+ sd ~ dunif(0, 2)
+ # Var function of RE 
+ # sd:
+ tau.sq <- sd * sd
+ # RE precision:
+ prec <- 1 / tau.sq
+ 
+ # Log-Odds calculations for
+ # each comparison
+ for (c in 1:3) { 
+ # All pair-wise comparison 
+ # log odds ratios:
+  for (k in (c + 1):4) { 
+  
+  # and single study comparison 
+  # odds ratios:
+  OR[c, k] <- d[k] - d[c] 
+  log(LOR[c, k]) <- OR[c,k]
+  }
+ }
+ # Rank treatment effect
+ # (where 1 = best):
+ rk <- 5 - rank(T[])
+ # & record the best treatment:
+ best <- equals(rk, 1)
+}
+

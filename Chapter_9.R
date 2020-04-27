@@ -520,7 +520,326 @@ mcmc_hist(x = posterior, c("rk[1]", "rk[2]", "rk[3]", "rk[4]"),
 # ========================================================================================
 # Random Effects MTC Models -----------------------------------------------
 # ========================================================================================
+# Both the model and the code introduced below are the natural extension of the Random 
+# Effects model for pairwise comparisons, discussed in Chapter 4, and the Fixed Effect MTC
+# model of the previous section.
 
+# In the Random Effects model each trial j on treatment contrast XY estimates a distinct 
+# LOR, ∂[jXY], which is drawn from a common distribution ∂[jXY] ~ N(d[XY], sigma^2). We 
+# will make the simplyfying assumption that the between-trial variance for all six 
+# contrasts are equal, such that sigma^2[XY] = sigma^2. Adding a vague Uniform prior for
+# sigma the full model becomes:
 
+# r[jk] ~ dbin(p[jk], n[jk])
+# logit(p[jk]) = µ[j] + ∂[jXY] * I(k = Y)
+# ∂[jXY] ~ N(d[XY], sigma^2)
+# 
+# d[BC] = d[AC] - d[AB]
+# d[BD] = d[AD] - d[AB]
+# d[CD] = d[AD] - d[AC]
+# 
+# µ[j], d[AB], d[AC], d[AD] ~ N(0, 100^2)
+# sigma ~ dunif(0, 2)
 
+# Example 9.1 revisited ---------------------------------------------------
+# There are a number of ways to code a Random Effects model. One approach is to modify the
+# code for the Fixed Effect version, as follows:
+model_String <- "model{
+  # Likelihood:
+   for (i in 1:50) {
+    r[i] ~ dbin(p[i], n[i])
+      
+  # Sampling model:
+   logit(p[i]) <- mu[s[i]] + delta[i] * (1 - equals(t[i], b[i]))
+   # Random effects distribution:
+    delta[i] ~ dnorm(md[i], prec)
+    
+   # Mean of random 
+   # effect distribution:
+   md[i] <- d[t[i]] - d[b[i]]
 
+   }
+   
+  # Absolute treatment
+  # effect sampling 
+  # model:
+  for (k in 1:4) {
+  logit(T[k]) <- A + d[k]
+  
+  }
+ # Set d[1] to 0:
+ d[1] <- 0
+ 
+ # Vague Priors on baseline:
+ for (j in 1:24) {
+  mu[j] ~ dnorm(0, .0001)
+ }
+ # Vague Priors on treatment
+ # effects:
+ for (k in 2:4) {
+  d[k] ~ dnorm(0, .0001)
+ }
+ # Prior Absolute treatment
+ # effects:
+ A ~ dnorm(-2.6, precA)
+ # Transformation of
+ # Absolute treatment
+ # var to prec:
+ precA <- pow(.38, -2)
+ 
+ # Vague prior on RE sd:
+ sd ~ dunif(0, 2)
+ # Var function of RE 
+ # sd:
+ tau.sq <- sd * sd
+ # RE precision:
+ prec <- 1 / tau.sq
+ 
+ # Log-Odds calculations for
+ # each comparison
+ for (c in 1:3) { 
+ # All pair-wise comparison 
+ # log odds ratios:
+  for (k in (c + 1):4) { 
+  
+  # and single study comparison 
+  # odds ratios:
+  OR[c, k] <- d[k] - d[c] 
+  log(LOR[c, k]) <- OR[c,k]
+  }
+ }
+ # Rank treatment effect
+ # (where 1 = best):
+ rk <- 5 - rank(T[])
+ # & record the best treatment:
+ best <- equals(rk, 1)
+ 
+}
+"
+writeLines(text = model_String, con = "rEffectsMCT.txt")
+
+params <- c("d", "T", "LOR", "best", "sd")
+
+jags_Mod <- jags(data = data_JAGS, parameters.to.save = params, 
+                 model.file = "rEffectsMCT.txt", inits = inits,
+                 n.chains = 2, n.iter = 40000, n.burnin = 20000)
+jags_Mod
+
+# Visual Inspection of posterior:
+posterior <- as.array(jags_Mod$BUGSoutput$sims.array)
+dimnames(posterior)
+
+color_scheme_set("mix-teal-pink")
+mcmc_hist(x = posterior, c("best[2]", "best[3]", "best[4]"),
+          binwidth = .6)
+
+# ========================================================================================
+# Model choice and consistency of MTC evidence ----------------------------
+# ========================================================================================
+# An important finding from the random effect analysis concerns the sigma parameter. Not 
+# only is its mean value of the same order as the mean treatment effects, but the lower 
+# credible limit, 0.54, is so high as to effectively rule out the hypothesis that sigma is
+# close to zero. This points us firmly in the direction of the Random Effects model. This 
+# can be put on a slightly more formal basis by comparing the Fixed and Random Effects 
+# models using some of the model critique methods from Chapter 4.
+
+# Random effects model:
+model_String <- "model{
+  # Likelihood:
+   for (i in 1:50) {
+    r[i] ~ dbin(p[i], n[i])
+      
+  # Sampling model:
+   logit(p[i]) <- mu[s[i]] + delta[i] * (1 - equals(t[i], b[i]))
+   # Random effects distribution:
+    delta[i] ~ dnorm(md[i], prec)
+    
+   # Mean of random 
+   # effect distribution:
+   md[i] <- d[t[i]] - d[b[i]]
+
+   }
+   
+  # Absolute treatment
+  # effect sampling 
+  # model:
+  for (k in 1:4) {
+  logit(T[k]) <- A + d[k]
+  
+  }
+ # Set d[1] to 0:
+ d[1] <- 0
+ 
+ # Vague Priors on baseline:
+ for (j in 1:24) {
+  mu[j] ~ dnorm(0, .0001)
+ }
+ 
+ # Vague Priors on treatment
+ # effects:
+ for (k in 2:4) {
+  d[k] ~ dnorm(0, .0001)
+ }
+ 
+ # Prior Absolute treatment
+ # effects:
+ A ~ dnorm(-2.6, precA)
+ # Transformation of
+ # Absolute treatment
+ # var to prec:
+ precA <- pow(.38, -2)
+ 
+ # Vague prior on RE sd:
+ sd ~ dunif(0, 2)
+ # Var function of RE 
+ # sd:
+ tau.sq <- sd * sd
+ # RE precision:
+ prec <- 1 / tau.sq
+ 
+ # Log-Odds calculations for
+ # each comparison
+ for (c in 1:3) { 
+ # All pair-wise comparison 
+ # log odds ratios:
+  for (k in (c + 1):4) { 
+  
+  # and single study comparison 
+  # odds ratios:
+  OR[c, k] <- d[k] - d[c] 
+  log(LOR[c, k]) <- OR[c,k]
+  }
+ }
+ # Rank treatment effect
+ # (where 1 = best):
+ rk <- 5 - rank(T[])
+ # & record the best treatment:
+ best <- equals(rk, 1)
+ 
+    # Model deviance 
+    # calculations:
+     for (i in 1:50) {
+ 
+    # Predicted model 
+    # deviance:
+    rhat[i] <- p[i] * n[i]
+    # Deviance of each 
+    # data point:
+    dev[i] <- 2 * (r[i] * (log(r[i]) - log(rhat[i])) + 
+    (n[i] - r[i]) * (log(n[i] - r[i]) - log(n[i] - rhat[i])))
+     }
+     
+     # Residual deviance:
+     resdev <- sum(dev[])
+}
+"
+
+writeLines(text = model_String, con = "RandEff_dev_MCT.txt")
+
+params <- c("resdev")
+
+jags_Mod <- jags(data = data_JAGS, parameters.to.save = params, 
+                 model.file = "RandEff_dev_MCT.txt", inits = inits,
+                 n.chains = 2, n.iter = 40000, n.burnin = 20000)
+jags_Mod
+
+# ... versus fixed effects model:
+model_String <- "model{
+  # Likelihood:
+   for (i in 1:50) {
+    r[i] ~ dbin(p[i], n[i])
+      
+  # Sampling model:
+   logit(p[i]) <- mu[s[i]] + d[t[i]] - d[b[i]]
+   }
+   
+  # Absolute treatment
+  # effect sampling 
+  # model:
+  for (k in 1:4) {
+  logit(T[k]) <- A + d[k]
+  
+  }
+ # Set d[1] to 0:
+ d[1] <- 0
+ 
+ # Vague Priors on baseline:
+ for (j in 1:24) {
+  mu[j] ~ dnorm(0, .0001)
+ }
+ 
+ # Vague Priors on treatment
+ # effects:
+ for (k in 2:4) {
+  d[k] ~ dnorm(0, .0001)
+ }
+ 
+ # Prior Absolute treatment
+ # effects:
+ A ~ dnorm(-2.6, precA)
+ # Transformation of
+ # Absolute treatment
+ # var to prec:
+ precA <- pow(.38, -2)
+ 
+ # Log-Odds calculations for
+ # each comparison
+ for (c in 1:3) { 
+ # All pair-wise comparison 
+ # log odds ratios:
+  for (k in (c + 1):4) { 
+  
+  # and single study comparison 
+  # odds ratios:
+  OR[c, k] <- d[k] - d[c] 
+  log(LOR[c, k]) <- OR[c,k]
+  }
+ }
+ 
+ # Rank treatment effect
+ # (where 1 = best):
+ rk <- 5 - rank(T[])
+ # & record the best treatment:
+ best <- equals(rk, 1)
+ 
+    # Model deviance 
+    # calculations:
+    for (i in 1:50) {
+ 
+    # Predicted model 
+    # deviance:
+    rhat[i] <- p[i] * n[i]
+    # Deviance of each 
+    # data point:
+    dev[i] <- 2 * (r[i] * (log(r[i]) - log(rhat[i])) + 
+    (n[i] - r[i]) * (log(n[i] - r[i]) - log(n[i] - rhat[i])))
+    }
+    
+    # Residual deviance:
+    resdev <- sum(dev[])
+
+}
+"
+writeLines(text = model_String, con = "FixEff_dev_MCT.txt")
+
+params <- c("resdev")
+
+jags_Mod <- jags(data = data_JAGS, parameters.to.save = params, 
+                 model.file = "FixEff_dev_MCT.txt", inits = inits,
+                 n.chains = 2, n.iter = 40000, n.burnin = 20000)
+jags_Mod
+
+# Deviance calculated in for the RE model is close to the number of observations (50), and
+# we would be justified in concluding that the Random Effects model provides an adequate 
+# fit to the data. Of course, a Random Effects model is extremely tolerant. The variance 
+# term will happily stretch to fit trials whose values are far from the mean without 
+# producing any sign that the model fit is poor. As we saw with the magnesium 
+# meta-analysis, a globally poor fit can only be obtained if one or two very large trials 
+# are distinctly far from the mean of the others. Therefore, the comparison of Fixed and 
+# Random Effects models tells us mostly about the level of between-trial heterogeneity 
+# within the different comparison types. It may not tell us much about whether the key 
+# consistency assumptions are being met.
+
+# ========================================================================================
+# Multi-arm trials --------------------------------------------------------
+# ========================================================================================
