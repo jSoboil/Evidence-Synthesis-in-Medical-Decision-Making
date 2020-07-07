@@ -61,7 +61,7 @@ Model_string <- "model {
     delta[i] ~ dnorm(d, prec)
   
   }
- # Prior on µ[i], the estimate 
+ # Prior on µ[i], the prior 
  # log(odds) of an event for 
  # i'th study:
   for (i in 1:Nstud) {
