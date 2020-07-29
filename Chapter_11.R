@@ -33,7 +33,60 @@
 # ==========================================================================================
 # Hierarchical Models for Evidence from different study designs -----------
 # ==========================================================================================
-# I will focus on this type of generalised evidence synthesis. I think that combining RCT and
-# observational evidence can be overly complex and opaque. Borrowing strength via hierarhical
-# modelling makes more sense, to me.
+# This section considers an extension of the random effects model presented in Chapter 4. Here
+# we model an extra level of variation to allow for variability in effect sizes between 
+# different sources of evidence (in addition to allowing for variability between study 
+# estimates within each study type). The model can be used when there are three or more 
+# different study types to include in the synthesis.
 
+# As an illustrative example, consider (some of) the evidence for the effect of electronic 
+# fetal heart rate monitoring (EFM) on perinatal mortality. EFM has not been shown to reduce
+# perinatal mortality in the 9 RCTs available at the time of the initial analysis (around 
+# 2000), although this may be due to low power since perinatal mortality is rare; thus the 
+# potential opportunity to consider a wider evidence base. In the evidence considered here, 
+# there are the aforementioned RCTs, comparative cohort studies and before and after studies:
+
+# DATA
+data_JAGS <- list(R = 9, C = 7, B = 10, T = 3,
+                  rct.rd = c(-10.51552, -2.028398, 4.115085, 6.479482, 0.0078609, 0, 
+                             2.247191, -5.817028, -3.984064),
+                  rct.serd = c(4.762193, 2.871006, 7.142432, 5.032322, 0.6079891, 8.058098,
+                               3.1075, 44.53912, 5.587013),
+                  ba.rd = c(-4.036327, 2.304048, -.6941801, -3.186446, -7.431126, -1.458522,
+                            -4.036984, -1.613824, -1.461775, -.1177738),
+                  ba.serd = c(2.242277, 3.579612, 0.6056279, 0.9381518, 2.121014, 0.5100973,
+                              1.072718, 0.6358061, 0.507642, 0.1981163),
+                  coh.rd = c(-1.41, -2.19, -4.34, -2.84, -2.53, -.23, -.46),
+                  coh.serd = c(1.433, 4.71, 1.914, 1.052, 3.081, 0.232, 0.123)
+                  )
+data_JAGS
+
+# The analysis was conducted on the Risk Difference (RD) scale, although detailed 
+# consideration of this data set elsewhere may now suggest that the Relative Risk may have 
+# been a better choice due to issues with excessive heterogeneity on the RD scale. 
+
+# If we assume that the studies of each particular type of are exchangeable and that the 
+# pooled estimates obtained from each study type are themselves exchangeable, then this can
+# be expressed formally using the following model:
+
+# Y[jl] ~ Normal(∂[jl], V[jl])    j = 1, ..., J[l] studies and l = 1, ... L (study type)
+# ∂[jl] ~ Normal(ø[l], psi^2[l])    ø[l] ~ Normal[d, tau^2]
+# psi^2[l] ~ [-, -]  d ~ [-, -]  tau^2 ~ [-, -]
+
+# where Y[jl] and V[jl] are the effect size and variance in the jth study of type l. In the
+# context of the EFM example, the effect sizes are RDs, and l = 1, 2, 3, which relate to RCTs,
+# comparative cohort studies and before and after studies, respectively. d is the overall 
+# pooled effect over all sources of evidence, and tau^2 is the between study type variance.
+# ø[l] is the pooled effect within study type l, and psi^2 is the between study variance 
+# within study type l. ∂[jl] is the true underlying effect estimated by the observed Y[jl] 
+# with variance V[jl]. When fitted, psi^2, d, and tau^2 require prior distributions with the 
+# notation indicating these are to be specified by the user. 
+
+# The code used to fit this model can be split into four sections. The first three sections 
+# consider the RCTs, cohort studies and before and after studies respectively and the code is 
+# identical in structure for all three. Data are entered as RDs and associated standard errors
+# are combined assuming studies of the same design are exchangeable using a Random effects 
+# model. For each type of evidence, a different pooled mean (theta[1], theta[2, theta[3]]) 
+# and between study (within type) standard deviation (sd.theta[1], sd.theta[2], sd.theta[3]) 
+# is estimated. In the fourth section of the code, these three pooled estimates are assumed to 
+# be themselves exchangeable, with overall mean and standard deviation.
