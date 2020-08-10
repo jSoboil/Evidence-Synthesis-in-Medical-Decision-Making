@@ -28,17 +28,19 @@ model {
  # Combining all 3 sources of information:
  for (i in 1:T) {
   theta[i] <- mean + (u[i] * sd.mean)
-  u[i] ~ dnorm(0, 1)
-  sd.theta[i] ~ dnorm(0, 0.1)T(0, )
+  u[i] ~ dnorm(0, 1 / u.prec[i]^2)
+  u.prec[i] ~ dunif(0, 1)
+  sd.theta[i] ~ dnorm(0, 0.001)T(0, )
   var.theta[i] <- sd.theta[i] * sd.theta[i]
   prec.theta[i] <- 1 / (sd.theta[i] * sd.theta[i])
   
  }
  # Hyperpriors:
- mean ~ dnorm(0, 0.01)
- sd.mean ~ dnorm(0, 0.1)I(0, )
+ mean ~ dnorm(0, mean.prec)
+ sd.mean ~ dnorm(0, 1 / sd.prec^2)T(0, )
  var.mean <- sd.mean * sd.mean
  prec.mean <- 1 / (sd.mean * sd.mean)
-
+ sd.prec ~ dunif(0, 1)
+ mean.prec ~ dunif(0, 1)
  }
 

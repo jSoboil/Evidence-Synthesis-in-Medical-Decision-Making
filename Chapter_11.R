@@ -116,18 +116,20 @@ model {
  # Combining all 3 sources of information:
  for (i in 1:T) {
   theta[i] <- mean + (u[i] * sd.mean)
-  u[i] ~ dnorm(0, 1)
-  sd.theta[i] ~ dnorm(0, 0.1)T(0, )
+  u[i] ~ dnorm(0, 1 / u.prec[i]^2)
+  u.prec[i] ~ dunif(0, 1)
+  sd.theta[i] ~ dnorm(0, 0.001)T(0, )
   var.theta[i] <- sd.theta[i] * sd.theta[i]
   prec.theta[i] <- 1 / (sd.theta[i] * sd.theta[i])
   
  }
  # Hyperpriors:
- mean ~ dnorm(0, 0.01)
- sd.mean ~ dnorm(0, 0.1)I(0, )
+ mean ~ dnorm(0, mean.prec)
+ sd.mean ~ dnorm(0, 1 / sd.prec^2)T(0, )
  var.mean <- sd.mean * sd.mean
  prec.mean <- 1 / (sd.mean * sd.mean)
-
+ sd.prec ~ dunif(0, 1)
+ mean.prec ~ dunif(0, 1)
  }
 "
 writeLines(text = model_String, con = "GES_chap11.txt")
@@ -170,15 +172,16 @@ params <- c("mean", "sd.mean", "theta[1]", "theta[2]", "theta[3]")
 
 # Model run:
 jags_Model <- jags(data = data_JAGS, model.file = "GES_chap11.txt",
-                   parameters.to.save = params, n.chains = 4, n.iter = 20000, 
-                   n.burnin = 5000, n.thin = 60, inits = inits)
+                   parameters.to.save = params, n.chains = 4, n.iter = 50000, 
+                   n.burnin = 10000, n.thin = 80)
 jags_Model
 
-jags_Model_Update <- autojags(jags_Model, Rhat = 1.01, parallel = TRUE, n.cores = 4)
-jags_Model_Update
+autoJAGS_Update <- autojags(jags_Model, Rhat = 1.001, parallel = TRUE, n.cores = 4,
+                            jags.seed = 22)
+autoJAGS_Update
 
 # Posterior visual checks:
-posterior <- as.array(jags_Model_Update$BUGSoutput$sims.array)
+posterior <- as.array(autoJAGS_Update$BUGSoutput$sims.array)
 dimnames(posterior)
 
 color_scheme_set("viridisB")
@@ -188,14 +191,15 @@ mcmc_trace(posterior, pars = c("mean", "theta[1]", "theta[2]", "theta[3]"),
 
 color_scheme_set("viridisA")
 theme_set(theme_minimal())
-mcmc_trace(posterior[,, 1:2], window = c(100, 150), size = 1) + 
+mcmc_trace(posterior[,, 1:4], window = c(250, 500), size = 1) + 
   panel_bg(fill = "white", color = NA) +
   legend_move("top")
 
 color_scheme_set("mix-teal-pink")
-mcmc_dens_overlay(posterior, pars = c("mean"))
+mcmc_dens_overlay(posterior, pars = c("mean", "theta[1]", "theta[2]", "theta[3]"))
 
 color_scheme_set("mix-blue-brightblue")
-mcmc_acf(posterior, pars = c("mean"), lags = 50)
+mcmc_acf(posterior, pars = c("mean", "theta[1]", "theta[2]", "theta[3]")
+         , lags = 50)
 
 # End file ----------------------------------------------------------------
