@@ -1,3 +1,13 @@
+library(R2jags)
+library(rjags)
+library(bayesplot)
+library(ggplot2)
+library(magrittr)
+library(parallel)
+library(tidyverse)
+
+options(mc.cores = detectCores())
+
 # ==========================================================================================
 # Generalised Evidence Synthesis ------------------------------------------
 # ==========================================================================================
@@ -44,22 +54,7 @@
 # perinatal mortality in the 9 RCTs available at the time of the initial analysis (around 
 # 2000), although this may be due to low power since perinatal mortality is rare; thus the 
 # potential opportunity to consider a wider evidence base. In the evidence considered here, 
-# there are the aforementioned RCTs, comparative cohort studies and before and after studies:
-
-# DATA
-data_JAGS <- list(R = 9, C = 7, B = 10, T = 3,
-                  rct.rd = c(-10.51552, -2.028398, 4.115085, 6.479482, 0.0078609, 0, 
-                             2.247191, -5.817028, -3.984064),
-                  rct.serd = c(4.762193, 2.871006, 7.142432, 5.032322, 0.6079891, 8.058098,
-                               3.1075, 44.53912, 5.587013),
-                  ba.rd = c(-4.036327, 2.304048, -.6941801, -3.186446, -7.431126, -1.458522,
-                            -4.036984, -1.613824, -1.461775, -.1177738),
-                  ba.serd = c(2.242277, 3.579612, 0.6056279, 0.9381518, 2.121014, 0.5100973,
-                              1.072718, 0.6358061, 0.507642, 0.1981163),
-                  coh.rd = c(-1.41, -2.19, -4.34, -2.84, -2.53, -.23, -.46),
-                  coh.serd = c(1.433, 4.71, 1.914, 1.052, 3.081, 0.232, 0.123)
-                  )
-data_JAGS
+# there are the aforementioned RCTs, comparative cohort studies and before and after studies.
 
 # The analysis was conducted on the Risk Difference (RD) scale, although detailed 
 # consideration of this data set elsewhere may now suggest that the Relative Risk may have 
@@ -90,3 +85,117 @@ data_JAGS
 # and between study (within type) standard deviation (sd.theta[1], sd.theta[2], sd.theta[3]) 
 # is estimated. In the fourth section of the code, these three pooled estimates are assumed to 
 # be themselves exchangeable, with overall mean and standard deviation.
+
+model_String <- "
+model {
+ 
+ # Randomised Control Trials:
+ for (i in 1:R) {
+  rct.prec[i] <- 1 / (rct.serd[i] * rct.serd[i])
+  rct.rd[i] ~ dnorm(rct.psi[i], rct.prec[i])
+  rct.psi[i] <- theta[1] + (rct.z[i] * sd.theta[1])
+  rct.z[i] ~ dnorm(0, 0.001)
+ }
+ 
+ # Comparative cohort studies:
+ for (i in 1:C) {
+  coh.prec[i] <- 1 / (coh.serd[i] * coh.serd[i])
+  coh.rd[i] ~ dnorm(coh.psi[i], coh.prec[i])
+  coh.psi[i] <- theta[2] + (coh.z[i] * sd.theta[2])
+  coh.z[i] ~ dnorm(0, 0.001)
+ }
+ 
+ # Before and after studies:
+ for (i in 1:B) {
+  ba.prec[i] <- 1 / (ba.serd[i] * ba.serd[i])
+  ba.rd[i] ~ dnorm(ba.psi[i], ba.prec[i])
+  ba.psi[i] <- theta[3] + (ba.z[i] * sd.theta[3])
+  ba.z[i] ~ dnorm(0, 0.001)
+ }
+ 
+ # Combining all 3 sources of information:
+ for (i in 1:T) {
+  theta[i] <- mean + (u[i] * sd.mean)
+  u[i] ~ dnorm(0, 1)
+  sd.theta[i] ~ dnorm(0, 0.1)T(0, )
+  var.theta[i] <- sd.theta[i] * sd.theta[i]
+  prec.theta[i] <- 1 / (sd.theta[i] * sd.theta[i])
+  
+ }
+ # Hyperpriors:
+ mean ~ dnorm(0, 0.01)
+ sd.mean ~ dnorm(0, 0.1)I(0, )
+ var.mean <- sd.mean * sd.mean
+ prec.mean <- 1 / (sd.mean * sd.mean)
+
+ }
+"
+writeLines(text = model_String, con = "GES_chap11.txt")
+
+
+# Data:
+data_JAGS <- list(R = 9, C = 7, B = 10, T = 3,
+                  rct.rd = c(-10.51552, -2.028398, 4.115085, 6.479482, 0.0078609, 0, 
+                             2.247191, -5.817028, -3.984064),
+                  rct.serd = c(4.762193, 2.871006, 7.142432, 5.032322, 0.8079891, 8.058098,
+                               3.1075, 44.53912, 5.587013),
+                  ba.rd = c(-4.036327, 2.304048, -.6941801, -3.186446, -7.431126, -1.458522,
+                            -4.036984, -1.613824, -1.461775, -.1177738),
+                  ba.serd = c(2.242277, 3.579612, 0.6056279, 0.9381518, 2.121014, 0.5100973,
+                              1.072718, 0.6358061, 0.507642, 0.1981163),
+                  coh.rd = c(-1.41, -2.19, -4.34, -2.84, -2.53, -.23, -.46),
+                  coh.serd = c(1.433, 4.71, 1.914, 1.052, 3.081, 0.232, 0.123)
+                  )
+data_JAGS
+
+# Initial chain values:
+inits <- list(
+ list(
+ mean = -.001, sd.mean = 0.001, sd.theta = c(0.001, 0.001, 0.001)
+ ),
+ list(
+  mean = -.001, sd.mean = 0.001, sd.theta = c(0.001, 0.001, 0.001)
+  ),
+  list(
+ mean = -.001, sd.mean = 0.001, sd.theta = c(0.001, 0.001, 0.001)
+ ),
+ list(
+  mean = -.001, sd.mean = 0.001, sd.theta = c(0.001, 0.001, 0.001)
+  )
+ )
+inits
+
+# Parameters to monitor:
+params <- c("mean", "sd.mean", "theta[1]", "theta[2]", "theta[3]")
+
+# Model run:
+jags_Model <- jags(data = data_JAGS, model.file = "GES_chap11.txt",
+                   parameters.to.save = params, n.chains = 4, n.iter = 20000, 
+                   n.burnin = 5000, n.thin = 60, inits = inits)
+jags_Model
+
+jags_Model_Update <- autojags(jags_Model, Rhat = 1.01, parallel = TRUE, n.cores = 4)
+jags_Model_Update
+
+# Posterior visual checks:
+posterior <- as.array(jags_Model_Update$BUGSoutput$sims.array)
+dimnames(posterior)
+
+color_scheme_set("viridisB")
+theme_set(theme_minimal())
+mcmc_trace(posterior, pars = c("mean", "theta[1]", "theta[2]", "theta[3]"), 
+           facet_args = list(ncol = 1, strip.position = "left"))
+
+color_scheme_set("viridisA")
+theme_set(theme_minimal())
+mcmc_trace(posterior[,, 1:2], window = c(100, 150), size = 1) + 
+  panel_bg(fill = "white", color = NA) +
+  legend_move("top")
+
+color_scheme_set("mix-teal-pink")
+mcmc_dens_overlay(posterior, pars = c("mean"))
+
+color_scheme_set("mix-blue-brightblue")
+mcmc_acf(posterior, pars = c("mean"), lags = 50)
+
+# End file ----------------------------------------------------------------

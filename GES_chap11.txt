@@ -1,0 +1,44 @@
+
+model {
+ 
+ # Randomised Control Trials:
+ for (i in 1:R) {
+  rct.prec[i] <- 1 / (rct.serd[i] * rct.serd[i])
+  rct.rd[i] ~ dnorm(rct.psi[i], rct.prec[i])
+  rct.psi[i] <- theta[1] + (rct.z[i] * sd.theta[1])
+  rct.z[i] ~ dnorm(0, 0.001)
+ }
+ 
+ # Comparative cohort studies:
+ for (i in 1:C) {
+  coh.prec[i] <- 1 / (coh.serd[i] * coh.serd[i])
+  coh.rd[i] ~ dnorm(coh.psi[i], coh.prec[i])
+  coh.psi[i] <- theta[2] + (coh.z[i] * sd.theta[2])
+  coh.z[i] ~ dnorm(0, 0.001)
+ }
+ 
+ # Before and after studies:
+ for (i in 1:B) {
+  ba.prec[i] <- 1 / (ba.serd[i] * ba.serd[i])
+  ba.rd[i] ~ dnorm(ba.psi[i], ba.prec[i])
+  ba.psi[i] <- theta[3] + (ba.z[i] * sd.theta[3])
+  ba.z[i] ~ dnorm(0, 0.001)
+ }
+ 
+ # Combining all 3 sources of information:
+ for (i in 1:T) {
+  theta[i] <- mean + (u[i] * sd.mean)
+  u[i] ~ dnorm(0, 1)
+  sd.theta[i] ~ dnorm(0, 0.1)T(0, )
+  var.theta[i] <- sd.theta[i] * sd.theta[i]
+  prec.theta[i] <- 1 / (sd.theta[i] * sd.theta[i])
+  
+ }
+ # Hyperpriors:
+ mean ~ dnorm(0, 0.01)
+ sd.mean ~ dnorm(0, 0.1)I(0, )
+ var.mean <- sd.mean * sd.mean
+ prec.mean <- 1 / (sd.mean * sd.mean)
+
+ }
+

@@ -1,14 +1,17 @@
 model {
-   # Binomial Likelihood for the 
+   # Binomial Likelihood 
+   # specification of 
    # i'th study:
    for (i in 1:Nstud) {
     rA[i] ~ dbin(pA[i], nA[i])
     rB[i] ~ dbin(pB[i], nB[i])
   
-    # Logistic regression for
-    # the i'th study:
+    # Logistic regression
+    # model, for i'th study,
+    # linking to Binomial 
+    # statistic p:
      logit(pA[i]) <- mu[i]
-     logit(pB[i]) <- mu[i] + delta[i] + beta * (lat[i] - mean(lat[]))
+     logit(pB[i]) <- mu[i] + delta[i] + beta * lat[i]
   
    # Statistical model, 
    # linking the
@@ -16,7 +19,7 @@ model {
     delta[i] ~ dnorm(d, prec)
   
   }
- # Prior on µ, the estimate 
+ # Prior on µ[i], the prior 
  # log(odds) of an event for 
  # i'th study:
   for (i in 1:Nstud) {
@@ -24,8 +27,9 @@ model {
   
   }
  # Prior on intercept (d), 
- # the mean pooled treatment 
- # effect:
+ # the pooled treatment 
+ # effect where 
+ # covariate lat = 0:
   d ~ dnorm(0.0, 1.0e-6)
  # Data transformation for d:
   OR <- exp(d)

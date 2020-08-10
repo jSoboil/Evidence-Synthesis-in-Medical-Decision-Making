@@ -109,7 +109,8 @@ inits <- list(d = 0, tau = 1, delta = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 )
 
 jags_Model <- jags(data = Data_jags, model.file = "Model.5.2.2.txt", 
-                   parameters.to.save = c("beta", "d", "tau", "tau.sq", "OR"))
+                   parameters.to.save = c("beta", "d", "tau", "tau.sq", "OR"),
+                  n.iter = 20000, n.burnin = 1000)
 jags_Model
 
 posterior <- as.array(jags_Model$BUGSoutput$sims.array)
