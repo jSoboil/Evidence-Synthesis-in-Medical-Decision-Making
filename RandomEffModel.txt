@@ -20,4 +20,6 @@ model {
   # and precision for delta: 
   tau.sq <- tau * tau
   prec <- 1 / (tau.sq)
+
 }
+

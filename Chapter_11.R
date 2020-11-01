@@ -3,10 +3,7 @@ library(rjags)
 library(bayesplot)
 library(ggplot2)
 library(magrittr)
-library(parallel)
 library(tidyverse)
-
-options(mc.cores = detectCores())
 
 # ==========================================================================================
 # Generalised Evidence Synthesis ------------------------------------------
@@ -80,46 +77,63 @@ options(mc.cores = detectCores())
 # The code used to fit this model can be split into four sections. The first three sections 
 # consider the RCTs, cohort studies and before and after studies respectively and the code is 
 # identical in structure for all three. Data are entered as RDs and associated standard errors
-# are combined assuming studies of the same design are exchangeable using a Random effects 
-# model. For each type of evidence, a different pooled mean (theta[1], theta[2, theta[3]]) 
-# and between study (within type) standard deviation (sd.theta[1], sd.theta[2], sd.theta[3]) 
-# is estimated. In the fourth section of the code, these three pooled estimates are assumed to 
-# be themselves exchangeable, with overall mean and standard deviation.
+# are combined assuming studies of the same design that are exchangeable using a Random 
+# effects model. For each type of evidence, a different pooled mean (theta[1], theta[2, 
+# theta[3]]) and between study (within type) standard deviation (sd.theta[1], sd.theta[2], 
+# sd.theta[3]) is estimated. In the fourth section of the code, these three pooled estimates
+# are assumed to be themselves exchangeable, with overall mean and standard deviation.
 
 model_String <- "
 model {
  
  # Randomised Control Trials:
  for (i in 1:R) {
-  rct.prec[i] <- 1 / (rct.serd[i] * rct.serd[i])
+ # Likelihood
   rct.rd[i] ~ dnorm(rct.psi[i], rct.prec[i])
+  # Random effects model
   rct.psi[i] <- theta[1] + (rct.z[i] * sd.theta[1])
+  # Prior
   rct.z[i] ~ dnorm(0, 0.001)
+  # Transformation
+  rct.prec[i] <- 1 / (rct.serd[i] * rct.serd[i])
  }
  
  # Comparative cohort studies:
  for (i in 1:C) {
-  coh.prec[i] <- 1 / (coh.serd[i] * coh.serd[i])
+# Likelihood
   coh.rd[i] ~ dnorm(coh.psi[i], coh.prec[i])
+  # Random effect model
   coh.psi[i] <- theta[2] + (coh.z[i] * sd.theta[2])
+  # Prior
   coh.z[i] ~ dnorm(0, 0.001)
+  # Transformation
+  coh.prec[i] <- 1 / (coh.serd[i] * coh.serd[i])
  }
  
  # Before and after studies:
  for (i in 1:B) {
-  ba.prec[i] <- 1 / (ba.serd[i] * ba.serd[i])
+ # Likelihood
   ba.rd[i] ~ dnorm(ba.psi[i], ba.prec[i])
+  # Random effects model
   ba.psi[i] <- theta[3] + (ba.z[i] * sd.theta[3])
+  # Prior
   ba.z[i] ~ dnorm(0, 0.001)
+  # Transformation
+  ba.prec[i] <- 1 / (ba.serd[i] * ba.serd[i])
  }
  
  # Combining all 3 sources of information:
  for (i in 1:T) {
+ # Regression effect model
   theta[i] <- mean + (u[i] * sd.mean)
   u[i] ~ dnorm(0, 1 / u.prec[i]^2)
+  # Prior
   u.prec[i] ~ dunif(0, 1)
+  # Prior
   sd.theta[i] ~ dnorm(0, 0.001)T(0, )
+  # Transformation
   var.theta[i] <- sd.theta[i] * sd.theta[i]
+  # Transformation
   prec.theta[i] <- 1 / (sd.theta[i] * sd.theta[i])
   
  }
@@ -130,6 +144,8 @@ model {
  prec.mean <- 1 / (sd.mean * sd.mean)
  sd.prec ~ dunif(0, 1)
  mean.prec ~ dunif(0, 1)
+ 
+ mean.Pr <- exp(mean)
  }
 "
 writeLines(text = model_String, con = "GES_chap11.txt")
@@ -168,12 +184,16 @@ inits <- list(
 inits
 
 # Parameters to monitor:
-params <- c("mean", "sd.mean", "theta[1]", "theta[2]", "theta[3]")
+params <- c("mean.Pr", "mean", "sd.mean", "theta[1]", "theta[2]", "theta[3]")
+
+n.iter <- 10000
+n.burnin <- 5000
+n.thin <- floor((n.iter-n.burnin)/500)
 
 # Model run:
 jags_Model <- jags(data = data_JAGS, model.file = "GES_chap11.txt",
-                   parameters.to.save = params, n.chains = 4, n.iter = 50000, 
-                   n.burnin = 10000, n.thin = 80)
+                   parameters.to.save = params, n.chains = 4, n.iter = n.iter, 
+                   n.burnin = n.burnin, n.thin = n.thin, jags.seed = 22)
 jags_Model
 
 autoJAGS_Update <- autojags(jags_Model, Rhat = 1.001, parallel = TRUE, n.cores = 4,

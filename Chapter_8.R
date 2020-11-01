@@ -270,7 +270,7 @@ mcmc_acf(posterior, pars = params, lags = 10)
 #  a measure of the number of independent inconsistencies there could be in the data set. 
 #  We might say that there are three degrees of freedom for inconsistency.
 
-# Inconsitency in the HIV data --------------------------------------------
+# Inconsistency in the HIV data --------------------------------------------
 #  The formal way to examine this is by cross-validation. Taking as an example, data point 
 #  4, we need to form a predictive distribution for the numerator r[4], based only on data 
 #  points 1 – 3 and 5 – 12, that is excluding data point 4, and then compare this predictive

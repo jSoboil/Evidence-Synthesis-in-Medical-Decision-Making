@@ -3,35 +3,52 @@ model {
  
  # Randomised Control Trials:
  for (i in 1:R) {
-  rct.prec[i] <- 1 / (rct.serd[i] * rct.serd[i])
+ # Likelihood
   rct.rd[i] ~ dnorm(rct.psi[i], rct.prec[i])
+  # Random effects model
   rct.psi[i] <- theta[1] + (rct.z[i] * sd.theta[1])
+  # Prior
   rct.z[i] ~ dnorm(0, 0.001)
+  # Transformation
+  rct.prec[i] <- 1 / (rct.serd[i] * rct.serd[i])
  }
  
  # Comparative cohort studies:
  for (i in 1:C) {
-  coh.prec[i] <- 1 / (coh.serd[i] * coh.serd[i])
+# Likelihood
   coh.rd[i] ~ dnorm(coh.psi[i], coh.prec[i])
+  # Random effect model
   coh.psi[i] <- theta[2] + (coh.z[i] * sd.theta[2])
+  # Prior
   coh.z[i] ~ dnorm(0, 0.001)
+  # Transformation
+  coh.prec[i] <- 1 / (coh.serd[i] * coh.serd[i])
  }
  
  # Before and after studies:
  for (i in 1:B) {
-  ba.prec[i] <- 1 / (ba.serd[i] * ba.serd[i])
+ # Likelihood
   ba.rd[i] ~ dnorm(ba.psi[i], ba.prec[i])
+  # Random effects model
   ba.psi[i] <- theta[3] + (ba.z[i] * sd.theta[3])
+  # Prior
   ba.z[i] ~ dnorm(0, 0.001)
+  # Transformation
+  ba.prec[i] <- 1 / (ba.serd[i] * ba.serd[i])
  }
  
  # Combining all 3 sources of information:
  for (i in 1:T) {
+ # Regression effect model
   theta[i] <- mean + (u[i] * sd.mean)
   u[i] ~ dnorm(0, 1 / u.prec[i]^2)
+  # Prior
   u.prec[i] ~ dunif(0, 1)
+  # Prior
   sd.theta[i] ~ dnorm(0, 0.001)T(0, )
+  # Transformation
   var.theta[i] <- sd.theta[i] * sd.theta[i]
+  # Transformation
   prec.theta[i] <- 1 / (sd.theta[i] * sd.theta[i])
   
  }
@@ -42,5 +59,7 @@ model {
  prec.mean <- 1 / (sd.mean * sd.mean)
  sd.prec ~ dunif(0, 1)
  mean.prec ~ dunif(0, 1)
+ 
+ mean.Pr <- exp(mean)
  }
 

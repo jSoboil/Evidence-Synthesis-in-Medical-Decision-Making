@@ -1,0 +1,54 @@
+
+model {
+
+  # Binomial likelihood:
+  for (i in 1:12) {
+   r[i] ~ dbin(p[i], n[i])
+  
+  }
+  
+ # Declared relationships
+ # between basic and
+ # functional parameters:
+  p[1] <- a
+  p[2] <- b
+  p[3] <- c
+  p[4] <- d
+  p[5] <- (b * d + (1 - a - b) * e / (1 - a))
+  p[6] <- (a * c + b * d + (1 - a - b) * e)
+  p[7] <- (a * c * f) / ((a * c * f) + (b * d * g) + (e * h * (1 - a - b)))
+  p[8] <- (b * d * g) / ((b * d * g) + (e * h * (1 - a - b)))
+  p[9] <- ((f * c * a) + (g * d * b) + h * e * (1 - a - b)) / 
+                                                 ((c * a) + (d * b) + e * (1 - a - b))
+  p[10] <- g
+  p[11] <- w
+  p[12] <- ((b * d) + (w * e) * (1 - a - b)) / ((b * d) + e * (1 - a - b))
+ 
+# Estimated basic
+# prior parameters:
+ a ~ dbeta(1, 2)
+ c ~ dbeta(1, 1)
+ d ~ dbeta(1, 1)
+ e ~ dbeta(1, 1)
+ f ~ dbeta(1, 1)
+ g ~ dbeta(1, 1)
+ h ~ dbeta(1, 1)
+ w ~ dbeta(1, 1)
+ z ~ dbeta(1, 1)
+
+# Estiamted functional
+# prior parameter:
+b <- z * (1 - a)
+
+# Distribution for NB of Maternal Diagnosis:
+ M <- 60012 - 54296 * Y
+
+# Maternal diagnosis:
+Y ~ dgamma(0.56, 3)T(0, 2)
+
+# Net Benefit:
+nb[1] <- 0
+nb[2] <- 105000 * (1 - a - b) * (M * e * (1 - h) - 3.0 * (1 - e * h))
+
+}
+

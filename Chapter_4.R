@@ -47,7 +47,6 @@ inits <- list(d = 0)
 # is also monitored:
 EviSynth_Mod <- jags(data = jags_Data, model.file = "ExModel.txt", 
      n.iter = 10000, n.burnin = 5000, parameters.to.save = c("OR", "d"))
-EviSynth_Mod
 
 # ... thus this is the 'average' marginal effect/averaged over 10000 simulations, given the 
 # declared normal probability distributions and the likelihood/sampling model. Note that due

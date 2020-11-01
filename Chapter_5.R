@@ -5,10 +5,8 @@ library(rjags)
 library(bayesplot)
 library(ggplot2)
 library(magrittr)
-library(parallel)
 library(tidyverse)
 
-options(mc.cores = detectCores())
 
 # Remember: BUGS/JAGS requires five key elements: specification of the likelihood, a 
 # description of the statistical model linking parameters to the likelihood, 
@@ -232,8 +230,7 @@ inits <- list(d = 0, tau = 1, delta = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 )
 
 jags_Model <- jags(data = Data_jags, model.file = "Model.5.2.2.txt", 
-                   parameters.to.save = c("beta", "d", "tau", "tau.sq", "OR", "rA",
-                                          "rB", "nA", "nB"))
+                   parameters.to.save = c("beta", "d"))
 jags_Model
 
 posterior <- as.array(jags_Model$BUGSoutput$sims.array)
@@ -340,9 +337,10 @@ inits <- list(d = 0, tau = 1, delta = c(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 )
 
 jags_Model <- jags(data = Data_jags, model.file = "Model.5.2.2.txt", 
-                   parameters.to.save = c("beta", "d", "d.uncent", "tau", "tau.sq", 
-                                          "OR", "prec"))
+                   parameters.to.save = c("beta", "d", "d.uncent", "OR"), n.iter = 30000)
+
 jags_Model
+
 #  It can be seen that a strong negative association is estimated (ß is estimared to be
 # 0.02 (95% CrI -0.03 to -0.01)), which implies that the Log Odds Ratio (LOR) decreases 
 # (linearly) the further away from the equator you are – implying the treatment increases
@@ -359,7 +357,7 @@ dimnames(posterior)
 
 color_scheme_set("viridisB")
 theme_set(theme_minimal())
-mcmc_trace(posterior, pars = c("d", "d.uncent", "beta", "tau"), 
+mcmc_trace(posterior, pars = c("d"), 
            facet_args = list(ncol = 1, strip.position = "left"))
 
 color_scheme_set("viridisA")
@@ -370,7 +368,7 @@ mcmc_trace(posterior, pars = c("OR", "d", "d.uncent", "beta"),
   legend_move("top")
 
 color_scheme_set("mix-teal-pink")
-mcmc_dens_overlay(posterior, pars = c("d", "beta"))
+mcmc_dens_overlay(posterior, pars = c("d"))
 
 color_scheme_set("pink")
 mcmc_pairs(posterior, pars = c("d", "beta"),
@@ -397,7 +395,7 @@ mcmc_acf(posterior, pars = c("d", "beta"), lags = 10)
 # reason the effect of ‘baseline risk’ on outcome is commonly explored through 
 # meta-regression. However, a complication with this analysis is that the covariate of 
 # interest is actually also part of the outcome definition. A specific model which allows
-# for this is considered in the next.
+# for this is considered next.
 
 # Baseline Risk -----------------------------------------------------------
 # Heterogeneity in baseline risk among trials is likely to reflect differences in patient
@@ -582,7 +580,7 @@ mcmc_acf(posterior, pars = c("d", "beta"), lags = 10)
 # contexts, such a model, which allows for uncertainty in covariate values, is referred 
 # to as a measurement error model.)
 
-# Hence, as predicted the ‘na ̈ıve’ analysis overestimates the association, although the
+# Hence, as predicted the ‘naive’ analysis overestimates the association, although the
 # bias is modest in this example. In instances where there are small numbers of small 
 # trials, the bias is potentially much greater.
 
