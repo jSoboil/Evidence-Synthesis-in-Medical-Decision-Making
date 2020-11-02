@@ -50,5 +50,9 @@ Y ~ dgamma(0.56, 3)T(0, 2)
 nb[1] <- 0
 nb[2] <- 105000 * (1 - a - b) * (M * e * (1 - h) - 3.0 * (1 - e * h))
 
+# EVPI:
+nb.sorted <- sort(nb[])
+vpi <- 7.7127 * (nb.sorted[N.k] - nb[k.current])
+
 }
 
